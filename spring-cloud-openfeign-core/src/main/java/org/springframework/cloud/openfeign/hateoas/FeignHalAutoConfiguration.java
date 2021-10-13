@@ -52,13 +52,19 @@ public class FeignHalAutoConfiguration {
 	@ConditionalOnBean(HalMediaTypeConfiguration.class)
 	@ConditionalOnMissingBean
 	public TypeConstrainedMappingJackson2HttpMessageConverter halJacksonHttpMessageConverter(
-			ObjectProvider<ObjectMapper> objectMapper, HalMediaTypeConfiguration halConfiguration) {
+		ObjectProvider<ObjectMapper> objectMapper, HalMediaTypeConfiguration halConfiguration) {
+		// 创建ObjectMapper对象
 		ObjectMapper mapper = objectMapper.getIfAvailable(ObjectMapper::new).copy();
+		// 配置HalMediaTypeConfiguration对象
 		halConfiguration.configureObjectMapper(mapper);
+		// 创建消息转换器
 		TypeConstrainedMappingJackson2HttpMessageConverter converter = new TypeConstrainedMappingJackson2HttpMessageConverter(
-				RepresentationModel.class);
+			RepresentationModel.class);
+		// 设置支持的媒体类型
 		converter.setSupportedMediaTypes(Collections.singletonList(HAL_JSON));
+		// 设置ObjectMapper对象
 		converter.setObjectMapper(mapper);
+		// 返回
 		return converter;
 	}
 

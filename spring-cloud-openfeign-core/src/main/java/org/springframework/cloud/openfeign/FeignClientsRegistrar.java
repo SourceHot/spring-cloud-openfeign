@@ -72,9 +72,13 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 
 	// patterned after Spring Integration IntegrationComponentScanRegistrar
 	// and RibbonClientsConfigurationRegistgrar
-
+	/**
+	 * 资源加载器
+	 */
 	private ResourceLoader resourceLoader;
-
+	/**
+	 * 环境对象
+	 */
 	private Environment environment;
 
 	FeignClientsRegistrar() {
@@ -145,9 +149,14 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 		this.resourceLoader = resourceLoader;
 	}
 
+	/**
+	 * 注册bean对象
+	 */
 	@Override
 	public void registerBeanDefinitions(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+		// 注册默认配置
 		registerDefaultConfiguration(metadata, registry);
+		// 注册feignClient对象
 		registerFeignClients(metadata, registry);
 	}
 
@@ -168,25 +177,39 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 
 	public void registerFeignClients(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
 
+		// 候选bean定义对象集合
 		LinkedHashSet<BeanDefinition> candidateComponents = new LinkedHashSet<>();
+		// 获取EnableFeignClients注解属性表
 		Map<String, Object> attrs = metadata.getAnnotationAttributes(EnableFeignClients.class.getName());
+		// 获取EnableFeignClients注解中的clients数据信息
 		final Class<?>[] clients = attrs == null ? null : (Class<?>[]) attrs.get("clients");
+		// 如果clients数据信息为空
 		if (clients == null || clients.length == 0) {
+			// 类路径扫描候选组件
 			ClassPathScanningCandidateComponentProvider scanner = getScanner();
+			// 设置资源加载器
 			scanner.setResourceLoader(this.resourceLoader);
+			// 添加过滤器，包含FeignClient注解的
 			scanner.addIncludeFilter(new AnnotationTypeFilter(FeignClient.class));
+			// 从EnableFeignClients属性表中获取基础扫描路径
 			Set<String> basePackages = getBasePackages(metadata);
+			// 包路径扫描
 			for (String basePackage : basePackages) {
+				// 将扫描到的bean定义加入到候选集合周
 				candidateComponents.addAll(scanner.findCandidateComponents(basePackage));
 			}
 		}
+		//
 		else {
+			// 循环clients数据将类对象通过注解bean定义对象创建候选bean定义对象，加入到候选集合中
 			for (Class<?> clazz : clients) {
 				candidateComponents.add(new AnnotatedGenericBeanDefinition(clazz));
 			}
 		}
 
+		// 循环候选bean定义对象
 		for (BeanDefinition candidateComponent : candidateComponents) {
+			// 如果bean定义对象类型是AnnotatedBeanDefinition则进行处理
 			if (candidateComponent instanceof AnnotatedBeanDefinition) {
 				// verify annotated class is an interface
 				AnnotatedBeanDefinition beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
@@ -194,9 +217,10 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 				Assert.isTrue(annotationMetadata.isInterface(), "@FeignClient can only be specified on an interface");
 
 				Map<String, Object> attributes = annotationMetadata
-						.getAnnotationAttributes(FeignClient.class.getCanonicalName());
+					.getAnnotationAttributes(FeignClient.class.getCanonicalName());
 
 				String name = getClientName(attributes);
+				// 注册feignClient注解中的配置类对象
 				registerClientConfiguration(registry, name, attributes.get("configuration"));
 
 				registerFeignClient(registry, annotationMetadata, attributes);

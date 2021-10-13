@@ -45,14 +45,17 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class FeignClientProperties {
 
 	private boolean defaultToProperties = true;
-
 	private String defaultConfig = "default";
 
+	/**
+	 * 配置表
+	 */
 	private Map<String, FeignClientConfiguration> config = new HashMap<>();
 
 	/**
 	 * Feign clients do not encode slash `/` characters by default. To change this
 	 * behavior, set the `decodeSlash` to `false`.
+	 * 是否编码斜杠,默认不
 	 */
 	private boolean decodeSlash = true;
 
@@ -110,37 +113,69 @@ public class FeignClientProperties {
 	 * Feign client configuration.
 	 */
 	public static class FeignClientConfiguration {
-
+		/**
+		 * 日志级别
+		 */
 		private Logger.Level loggerLevel;
-
+		/**
+		 * 链接超时时间
+		 */
 		private Integer connectTimeout;
-
+		/**
+		 * 读取超时时间
+		 */
 		private Integer readTimeout;
-
+		/**
+		 * 重试机制
+		 */
 		private Class<Retryer> retryer;
-
+		/**
+		 * 异常解码类
+		 */
 		private Class<ErrorDecoder> errorDecoder;
-
+		/**
+		 * 请求拦截器集合
+		 */
 		private List<Class<RequestInterceptor>> requestInterceptors;
-
+		/**
+		 * 请求头集合
+		 */
 		private Map<String, Collection<String>> defaultRequestHeaders;
-
+		/**
+		 * 请求参数集合
+		 */
 		private Map<String, Collection<String>> defaultQueryParameters;
-
+		/**
+		 * 是否解码404
+		 */
 		private Boolean decode404;
-
+		/**
+		 * 解码器
+		 */
 		private Class<Decoder> decoder;
-
+		/**
+		 *  编码器
+		 */
 		private Class<Encoder> encoder;
-
+		/**
+		 *解析Feign中的注解的类
+		 */
 		private Class<Contract> contract;
-
+		/**
+		 * 异常传播策略
+		 */
 		private ExceptionPropagationPolicy exceptionPropagationPolicy;
-
+		/**
+		 * Capability接口集合，用于拓展Feign中的接口对象
+		 */
 		private List<Class<Capability>> capabilities;
-
+		/**
+		 * Feign Client 的指标配置
+		 */
 		private MetricsProperties metrics;
-
+		/**
+		 * 是否重定向
+		 */
 		private Boolean followRedirects;
 
 		public Logger.Level getLoggerLevel() {
