@@ -161,14 +161,16 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 	}
 
 	private void registerDefaultConfiguration(AnnotationMetadata metadata, BeanDefinitionRegistry registry) {
+		// 提取EnableFeignClients注解的数据信息
 		Map<String, Object> defaultAttrs = metadata.getAnnotationAttributes(EnableFeignClients.class.getName(), true);
 
+		// 如果EnableFeignClients注解的数据信息存在并且有defaultConfiguration键
 		if (defaultAttrs != null && defaultAttrs.containsKey("defaultConfiguration")) {
+			// 计算名称
 			String name;
 			if (metadata.hasEnclosingClass()) {
 				name = "default." + metadata.getEnclosingClassName();
-			}
-			else {
+			} else {
 				name = "default." + metadata.getClassName();
 			}
 			registerClientConfiguration(registry, name, defaultAttrs.get("defaultConfiguration"));

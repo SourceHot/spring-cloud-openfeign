@@ -43,6 +43,7 @@ public class FeignContentGzipEncodingInterceptor extends BaseRequestInterceptor 
 	@Override
 	public void apply(RequestTemplate template) {
 
+		// 确认是否需要添加请求头
 		if (requiresCompression(template)) {
 			addHeader(template, HttpEncoding.CONTENT_ENCODING_HEADER, HttpEncoding.GZIP_ENCODING,
 					HttpEncoding.DEFLATE_ENCODING);
