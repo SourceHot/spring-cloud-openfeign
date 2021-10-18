@@ -56,6 +56,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
+ * 用于创建FeignClient的工厂bean对象
  * @author Spencer Gibb
  * @author Venil Noronha
  * @author Eko Kurniawan Khannedy

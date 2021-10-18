@@ -173,6 +173,7 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 			} else {
 				name = "default." + metadata.getClassName();
 			}
+			// 注册客户端配置
 			registerClientConfiguration(registry, name, defaultAttrs.get("defaultConfiguration"));
 		}
 	}
@@ -215,72 +216,106 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 			if (candidateComponent instanceof AnnotatedBeanDefinition) {
 				// verify annotated class is an interface
 				AnnotatedBeanDefinition beanDefinition = (AnnotatedBeanDefinition) candidateComponent;
+				// 获取bean的元信息
 				AnnotationMetadata annotationMetadata = beanDefinition.getMetadata();
 				Assert.isTrue(annotationMetadata.isInterface(), "@FeignClient can only be specified on an interface");
 
+				// 获取FeignClient注解元信息
 				Map<String, Object> attributes = annotationMetadata
 					.getAnnotationAttributes(FeignClient.class.getCanonicalName());
 
+				// 提取feignClient的名称
 				String name = getClientName(attributes);
 				// 注册feignClient注解中的配置类对象
 				registerClientConfiguration(registry, name, attributes.get("configuration"));
-
+				// 注册feignClient
 				registerFeignClient(registry, annotationMetadata, attributes);
 			}
 		}
 	}
 
 	private void registerFeignClient(BeanDefinitionRegistry registry, AnnotationMetadata annotationMetadata,
-			Map<String, Object> attributes) {
+									 Map<String, Object> attributes) {
+		// 获取类名
 		String className = annotationMetadata.getClassName();
+		// 将类名转换为类对象
 		Class clazz = ClassUtils.resolveClassName(className, null);
+		// 获取bean工厂，如果传入的bean定义注册器是ConfigurableBeanFactory类型则直接进行转换，否则bean工厂将会是null
 		ConfigurableBeanFactory beanFactory = registry instanceof ConfigurableBeanFactory
-				? (ConfigurableBeanFactory) registry : null;
+			? (ConfigurableBeanFactory) registry : null;
+		// 获取上下文ID
 		String contextId = getContextId(beanFactory, attributes);
+		// 获取名称
 		String name = getName(attributes);
+		// 获取用于创建FeignClient的工厂bean对象
 		FeignClientFactoryBean factoryBean = new FeignClientFactoryBean();
+		// 为工厂bean对象设置bean工厂
 		factoryBean.setBeanFactory(beanFactory);
+		// 为工厂bean对象设置名称
 		factoryBean.setName(name);
+		// 为工厂bean对象设置上下文ID
 		factoryBean.setContextId(contextId);
+		// 为工厂bean对象设置需要实例化的类型
 		factoryBean.setType(clazz);
+		// 为工厂bean设置是否可以刷新客户端
 		factoryBean.setRefreshableClient(isClientRefreshEnabled());
+		// 创建bean定义构造器
 		BeanDefinitionBuilder definition = BeanDefinitionBuilder.genericBeanDefinition(clazz, () -> {
+			// 设置url
 			factoryBean.setUrl(getUrl(beanFactory, attributes));
+			// 设置path
 			factoryBean.setPath(getPath(beanFactory, attributes));
+			// 设置是否对404进行解码
 			factoryBean.setDecode404(Boolean.parseBoolean(String.valueOf(attributes.get("decode404"))));
+			// 获取fallback数据值
 			Object fallback = attributes.get("fallback");
+			// fallback 不为空的情况下将其设置到工厂bean中
 			if (fallback != null) {
 				factoryBean.setFallback(fallback instanceof Class ? (Class<?>) fallback
-						: ClassUtils.resolveClassName(fallback.toString(), null));
+					: ClassUtils.resolveClassName(fallback.toString(), null));
 			}
+			// 获取fallbackFactory数据值
 			Object fallbackFactory = attributes.get("fallbackFactory");
+			// 在fallbackFactory数据值不为空的情况下设置给工厂bean
 			if (fallbackFactory != null) {
 				factoryBean.setFallbackFactory(fallbackFactory instanceof Class ? (Class<?>) fallbackFactory
-						: ClassUtils.resolveClassName(fallbackFactory.toString(), null));
+					: ClassUtils.resolveClassName(fallbackFactory.toString(), null));
 			}
 			return factoryBean.getObject();
 		});
+
+		// 设置自动注入类型
 		definition.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_BY_TYPE);
+		// 设置是懒加载
 		definition.setLazyInit(true);
+		// 验证属性表
 		validate(attributes);
 
+		// 获取bean定义对象
 		AbstractBeanDefinition beanDefinition = definition.getBeanDefinition();
+		// 设置factoryBeanObjectType属性为类名
 		beanDefinition.setAttribute(FactoryBean.OBJECT_TYPE_ATTRIBUTE, className);
+		// 设置feignClientsRegistrarFactoryBean属性为工厂bean
 		beanDefinition.setAttribute("feignClientsRegistrarFactoryBean", factoryBean);
 
 		// has a default, won't be null
+		// 获取primary属性
 		boolean primary = (Boolean) attributes.get("primary");
-
+		// 设置bean定义中的primary数据
 		beanDefinition.setPrimary(primary);
 
+		// 获取qualifiers数据集合
 		String[] qualifiers = getQualifiers(attributes);
+		// 如果qualifiers为空的情况下创建默认数据
 		if (ObjectUtils.isEmpty(qualifiers)) {
-			qualifiers = new String[] { contextId + "FeignClient" };
+			qualifiers = new String[]{contextId + "FeignClient"};
 		}
 
+		// 创建bean定义持有器
 		BeanDefinitionHolder holder = new BeanDefinitionHolder(beanDefinition, className, qualifiers);
+		// 注册bean定义持有器
 		BeanDefinitionReaderUtils.registerBeanDefinition(holder, registry);
-
+		// 注册Request.Options类型的bean定义
 		registerOptionsBeanDefinition(registry, contextId);
 	}
 
@@ -429,11 +464,14 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 	}
 
 	private void registerClientConfiguration(BeanDefinitionRegistry registry, Object name, Object configuration) {
+		// 创建FeignClientSpecification类型的bean定义对象
 		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(FeignClientSpecification.class);
+		// 设置构造参数
 		builder.addConstructorArgValue(name);
 		builder.addConstructorArgValue(configuration);
+		// 注册bean定义
 		registry.registerBeanDefinition(name + "." + FeignClientSpecification.class.getSimpleName(),
-				builder.getBeanDefinition());
+			builder.getBeanDefinition());
 	}
 
 	@Override
@@ -444,19 +482,28 @@ class FeignClientsRegistrar implements ImportBeanDefinitionRegistrar, ResourceLo
 	/**
 	 * This method is meant to create {@link Request.Options} beans definition with
 	 * refreshScope.
-	 * @param registry spring bean definition registry
+	 *
+	 * @param registry  spring bean definition registry
 	 * @param contextId name of feign client
 	 */
 	private void registerOptionsBeanDefinition(BeanDefinitionRegistry registry, String contextId) {
+		// 确认是否允许刷新客户端，允许的情况下处理
 		if (isClientRefreshEnabled()) {
+			// 计算bean名称
 			String beanName = Request.Options.class.getCanonicalName() + "-" + contextId;
+			// 创建bean定义构造器
 			BeanDefinitionBuilder definitionBuilder = BeanDefinitionBuilder
-					.genericBeanDefinition(OptionsFactoryBean.class);
+				.genericBeanDefinition(OptionsFactoryBean.class);
+			// 设置作用域为refresh，表示刷新作用域
 			definitionBuilder.setScope("refresh");
+			// 向bean定义构造器中加入contextId属性
 			definitionBuilder.addPropertyValue("contextId", contextId);
+			// 创建bean定义持有器
 			BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(definitionBuilder.getBeanDefinition(),
-					beanName);
+				beanName);
+			// 通过作用域代理器进行创建代理后的bean定义持有器
 			definitionHolder = ScopedProxyUtils.createScopedProxy(definitionHolder, registry, true);
+			// 进行bean定义注册
 			BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, registry);
 		}
 	}
