@@ -21,6 +21,7 @@ import feign.Logger;
 /**
  * Allows an application to use a custom Feign {@link Logger}.
  *
+ *  feign 日志工厂
  * @author Venil Noronha
  */
 public interface FeignLoggerFactory {

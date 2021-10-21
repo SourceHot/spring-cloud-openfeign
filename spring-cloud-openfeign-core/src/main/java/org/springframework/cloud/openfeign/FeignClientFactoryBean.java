@@ -78,37 +78,69 @@ public class FeignClientFactoryBean
 	 ***********************************/
 
 	private static Log LOG = LogFactory.getLog(FeignClientFactoryBean.class);
-
+	/**
+	 * FeignClient标记的类对象
+	 */
 	private Class<?> type;
-
+	/**
+	 * 名称
+	 */
 	private String name;
-
+	/**
+	 * 请求域名
+	 */
 	private String url;
-
+	/**
+	 * 上下文id
+	 */
 	private String contextId;
-
+	/**
+	 * 请求地址
+	 */
 	private String path;
-
+	/**
+	 * 是否解码404信息
+	 */
 	private boolean decode404;
-
+	/**
+	 * 是否继承父上下文
+	 */
 	private boolean inheritParentContext = true;
-
+	/**
+	 * 应用上下文
+	 */
 	private ApplicationContext applicationContext;
-
+	/**
+	 * bean工厂
+	 */
 	private BeanFactory beanFactory;
-
+	/**
+	 * 回调对象
+	 */
 	private Class<?> fallback = void.class;
-
+	/**
+	 * 回到对象生成器
+	 */
 	private Class<?> fallbackFactory = void.class;
-
+	/**
+	 * 读取超时时间
+	 */
 	private int readTimeoutMillis = new Request.Options().readTimeoutMillis();
-
+	/**
+	 * 连接超时时间
+	 */
 	private int connectTimeoutMillis = new Request.Options().connectTimeoutMillis();
-
+	/**
+	 * 是否重定向
+	 */
 	private boolean followRedirects = new Request.Options().isFollowRedirects();
-
+	/**
+	 * 是否允许刷新客户端
+	 */
 	private boolean refreshableClient = false;
-
+	/**
+	 * FeignBuilder自定义集合
+	 */
 	private final List<FeignBuilderCustomizer> additionalCustomizers = new ArrayList<>();
 
 	@Override
@@ -118,19 +150,24 @@ public class FeignClientFactoryBean
 	}
 
 	protected Feign.Builder feign(FeignContext context) {
+		// 获取feign日志工厂
 		FeignLoggerFactory loggerFactory = get(context, FeignLoggerFactory.class);
+		// 创建日志对象
 		Logger logger = loggerFactory.create(type);
 
 		// @formatter:off
+		// 获取FeignBuilder对象
 		Feign.Builder builder = get(context, Feign.Builder.class)
-				// required values
-				.logger(logger)
-				.encoder(get(context, Encoder.class))
-				.decoder(get(context, Decoder.class))
-				.contract(get(context, Contract.class));
+			// required values
+			.logger(logger)
+			.encoder(get(context, Encoder.class))
+			.decoder(get(context, Decoder.class))
+			.contract(get(context, Contract.class));
 		// @formatter:on
 
+		// 配置FeignBuilder对象
 		configureFeign(context, builder);
+		// 处理FeignBuilderCustomizer接口为FeignBuilder对象进行自定义处理
 		applyBuildCustomizers(context, builder);
 
 		return builder;
@@ -148,25 +185,34 @@ public class FeignClientFactoryBean
 	}
 
 	protected void configureFeign(FeignContext context, Feign.Builder builder) {
+		// 如果bean工厂不为空的情况下从bean工厂中获取Feign客户端配置参数，如果为空的情况下从应用上下文中获取Feign客户端配置参数
 		FeignClientProperties properties = beanFactory != null ? beanFactory.getBean(FeignClientProperties.class)
-				: applicationContext.getBean(FeignClientProperties.class);
+			: applicationContext.getBean(FeignClientProperties.class);
 
+		// 获取Feign客户端配置
 		FeignClientConfigurer feignClientConfigurer = getOptional(context, FeignClientConfigurer.class);
+
+		// 设置inheritParentContext属性
 		setInheritParentContext(feignClientConfigurer.inheritParentConfiguration());
 
+		// 如果Feign客户端配置参数不为空并且inheritParentContext值为真
 		if (properties != null && inheritParentContext) {
+			// 如果Feign客户端参数是默认属性
 			if (properties.isDefaultToProperties()) {
+				// 从Feign上下文中获取参数对Feign.Builder对象进行数据设置
 				configureUsingConfiguration(context, builder);
+				// 从Feign客户端配置参数中获取默认配置参数对Feign.Builder对象进行数据设置
 				configureUsingProperties(properties.getConfig().get(properties.getDefaultConfig()), builder);
+				// 从Feign客户端配置表中根据上下文id获取配置对Feign.Builder对象进行数据设置
 				configureUsingProperties(properties.getConfig().get(contextId), builder);
 			}
+			// 如果不是默认属性
 			else {
 				configureUsingProperties(properties.getConfig().get(properties.getDefaultConfig()), builder);
 				configureUsingProperties(properties.getConfig().get(contextId), builder);
 				configureUsingConfiguration(context, builder);
 			}
-		}
-		else {
+		} else {
 			configureUsingConfiguration(context, builder);
 		}
 	}
@@ -312,6 +358,7 @@ public class FeignClientFactoryBean
 	}
 
 	protected <T> T get(FeignContext context, Class<T> type) {
+		// 从上下文对象中获取实例对象
 		T instance = context.getInstance(contextId, type);
 		if (instance == null) {
 			throw new IllegalStateException("No bean found of type " + type + " for " + contextId);
@@ -378,24 +425,30 @@ public class FeignClientFactoryBean
 	 * information
 	 */
 	<T> T getTarget() {
+		// 提取Feign上下文
 		FeignContext context = beanFactory != null ? beanFactory.getBean(FeignContext.class)
-				: applicationContext.getBean(FeignContext.class);
+			: applicationContext.getBean(FeignContext.class);
+		// 创建FeignBuilder对象
 		Feign.Builder builder = feign(context);
 
+		// 如果url数据为空
 		if (!StringUtils.hasText(url)) {
+			// 警告日志输出
 			if (url != null && LOG.isWarnEnabled()) {
 				LOG.warn("The provided URL is empty. Will try picking an instance via load-balancing.");
-			}
-			else if (LOG.isDebugEnabled()) {
+			} else if (LOG.isDebugEnabled()) {
 				LOG.debug("URL not provided. Will use LoadBalancer.");
 			}
+			// 如果name属性不是以http开头的将会补充http://将其设置为url变量
 			if (!name.startsWith("http")) {
 				url = "http://" + name;
-			}
-			else {
+			} else {
+				//  url设置为name值
 				url = name;
 			}
+			// 清理空字符串和多余的斜杠
 			url += cleanPath();
+			// 创建
 			return (T) loadBalance(builder, context, new HardCodedTarget<>(type, name, url));
 		}
 		if (StringUtils.hasText(url) && !url.startsWith("http")) {

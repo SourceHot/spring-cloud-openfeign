@@ -27,6 +27,7 @@ import org.springframework.lang.Nullable;
  * A factory that creates instances of feign classes. It creates a Spring
  * ApplicationContext per client name, and extracts the beans that it needs from there.
  *
+ * feign上下文
  * @author Spencer Gibb
  * @author Dave Syer
  * @author Matt King
@@ -41,6 +42,7 @@ public class FeignContext extends NamedContextFactory<FeignClientSpecification> 
 	@Nullable
 	public <T> T getInstanceWithoutAncestors(String name, Class<T> type) {
 		try {
+			// 获取bean实例
 			return BeanFactoryUtils.beanOfType(getContext(name), type);
 		}
 		catch (BeansException ex) {
