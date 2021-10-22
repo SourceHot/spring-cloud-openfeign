@@ -217,6 +217,9 @@ public class FeignClientFactoryBean
 		}
 	}
 
+	/**
+	 * 配置需要使用的配置对象
+	 */
 	protected void configureUsingConfiguration(FeignContext context, Feign.Builder builder) {
 		Logger.Level level = getInheritedAwareOptional(context, Logger.Level.class);
 		if (level != null) {
@@ -389,15 +392,20 @@ public class FeignClientFactoryBean
 	}
 
 	protected <T> T loadBalance(Feign.Builder builder, FeignContext context, HardCodedTarget<T> target) {
+		// 获取客户端对象
 		Client client = getOptional(context, Client.class);
+		// 客户端对象不为空的情况下
 		if (client != null) {
+			// 将客户端对象设置到FeignBuilder
 			builder.client(client);
+			// 获取Targeter对象
 			Targeter targeter = get(context, Targeter.class);
+			// 生成
 			return targeter.target(this, builder, context, target);
 		}
 
 		throw new IllegalStateException(
-				"No Feign Client for loadBalancing defined. Did you forget to include spring-cloud-starter-loadbalancer?");
+			"No Feign Client for loadBalancing defined. Did you forget to include spring-cloud-starter-loadbalancer?");
 	}
 
 	/**
@@ -448,15 +456,20 @@ public class FeignClientFactoryBean
 			}
 			// 清理空字符串和多余的斜杠
 			url += cleanPath();
-			// 创建
+			// 创建FeignClient接口实现类
 			return (T) loadBalance(builder, context, new HardCodedTarget<>(type, name, url));
 		}
+		// 如果存在url数据值并且没有以http
 		if (StringUtils.hasText(url) && !url.startsWith("http")) {
 			url = "http://" + url;
 		}
+		// 清理空字符串和多余的斜杠得到最终的路由地址
 		String url = this.url + cleanPath();
+		// 获取客户端接口实例
 		Client client = getOptional(context, Client.class);
+		// 如果客户端接口实例不为空
 		if (client != null) {
+			// 不同类型的情况下将包装源对象进行提取
 			if (client instanceof FeignBlockingLoadBalancerClient) {
 				// not load balancing because we have a url,
 				// but Spring Cloud LoadBalancer is on the classpath, so unwrap
@@ -467,9 +480,12 @@ public class FeignClientFactoryBean
 				// but Spring Cloud LoadBalancer is on the classpath, so unwrap
 				client = ((RetryableFeignBlockingLoadBalancerClient) client).getDelegate();
 			}
+			// 对FeignBuilder设置client对象
 			builder.client(client);
 		}
+		// 获取Targeter对象
 		Targeter targeter = get(context, Targeter.class);
+		// 将FeignBuilder对象传入Targeter对象中进行包装生成最终对象
 		return (T) targeter.target(this, builder, context, new HardCodedTarget<>(type, name, url));
 	}
 

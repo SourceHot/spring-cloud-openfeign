@@ -47,10 +47,19 @@ public final class FeignCircuitBreaker {
 	 */
 	public static final class Builder extends Feign.Builder {
 
+		/**
+		 * 熔断工厂
+		 */
 		private CircuitBreakerFactory circuitBreakerFactory;
 
+		/**
+		 * Feign客户端名称
+		 */
 		private String feignClientName;
 
+		/**
+		 * 是否启动熔断
+		 */
 		private boolean circuitBreakerGroupEnabled;
 
 		Builder circuitBreakerFactory(CircuitBreakerFactory circuitBreakerFactory) {
