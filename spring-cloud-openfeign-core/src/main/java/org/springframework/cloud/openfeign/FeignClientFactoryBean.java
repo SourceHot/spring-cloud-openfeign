@@ -174,13 +174,15 @@ public class FeignClientFactoryBean
 	}
 
 	private void applyBuildCustomizers(FeignContext context, Feign.Builder builder) {
+		// 从Feign上下文中获取FeignBuilderCustomizer接口实现类集合
 		Map<String, FeignBuilderCustomizer> customizerMap = context.getInstances(contextId,
 				FeignBuilderCustomizer.class);
-
+		//  如果FeignBuilderCustomizer接口实现类集合不为空则先进行排序，在处理所有自定义Feign.Builder对象操作
 		if (customizerMap != null) {
 			customizerMap.values().stream().sorted(AnnotationAwareOrderComparator.INSTANCE)
 					.forEach(feignBuilderCustomizer -> feignBuilderCustomizer.customize(builder));
 		}
+		// 循环成员变量FeignBuilderCustomizer，调用customize方法将Feign.Builder对象进行自定义出
 		additionalCustomizers.forEach(customizer -> customizer.customize(builder));
 	}
 
