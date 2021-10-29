@@ -16,34 +16,10 @@
 
 package org.springframework.cloud.openfeign.support;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import feign.Contract;
-import feign.Feign;
-import feign.MethodMetadata;
-import feign.Param;
-import feign.Request;
-
+import feign.*;
 import org.springframework.cloud.openfeign.AnnotatedParameterProcessor;
 import org.springframework.cloud.openfeign.CollectionFormat;
-import org.springframework.cloud.openfeign.annotation.MatrixVariableParameterProcessor;
-import org.springframework.cloud.openfeign.annotation.PathVariableParameterProcessor;
-import org.springframework.cloud.openfeign.annotation.QueryMapParameterProcessor;
-import org.springframework.cloud.openfeign.annotation.RequestHeaderParameterProcessor;
-import org.springframework.cloud.openfeign.annotation.RequestParamParameterProcessor;
-import org.springframework.cloud.openfeign.annotation.RequestPartParameterProcessor;
+import org.springframework.cloud.openfeign.annotation.*;
 import org.springframework.cloud.openfeign.encoding.HttpEncoding;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.ResourceLoaderAware;
@@ -64,6 +40,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
+import java.util.*;
+
 import static feign.Util.checkState;
 import static feign.Util.emptyToNull;
 import static org.springframework.cloud.openfeign.support.FeignUtils.addTemplateParameter;
@@ -82,27 +64,60 @@ import static org.springframework.core.annotation.AnnotatedElementUtils.findMerg
  */
 public class SpringMvcContract extends Contract.BaseContract implements ResourceLoaderAware {
 
+	/**
+	 *ACCEPT字符串常量
+	 */
 	private static final String ACCEPT = "Accept";
 
+	/**
+	 * 内容类型常量
+	 */
 	private static final String CONTENT_TYPE = "Content-Type";
 
+	/**
+	 * String类型描述符
+	 */
 	private static final TypeDescriptor STRING_TYPE_DESCRIPTOR = TypeDescriptor.valueOf(String.class);
 
+	/**
+	 *Iterable类型描述符
+	 */
 	private static final TypeDescriptor ITERABLE_TYPE_DESCRIPTOR = TypeDescriptor.valueOf(Iterable.class);
 
+	/**
+	 * 参数名称发现器
+	 */
 	private static final ParameterNameDiscoverer PARAMETER_NAME_DISCOVERER = new DefaultParameterNameDiscoverer();
 
+	/**
+	 * 注解和注解处理器映射关系表
+	 */
 	private final Map<Class<? extends Annotation>, AnnotatedParameterProcessor> annotatedArgumentProcessors;
 
+	/**
+	 * 方法名称和处理方法的映射关系表
+	 */
 	private final Map<String, Method> processedMethods = new HashMap<>();
 
+	/**
+	 * 转换服务
+	 */
 	private final ConversionService conversionService;
 
+	/**
+	 * 转换服务工厂,主要用于获取Param.Expander对象
+	 */
 	private final ConvertingExpanderFactory convertingExpanderFactory;
 
+	/**
+	 * 资源加载器
+	 */
 	private ResourceLoader resourceLoader = new DefaultResourceLoader();
 
-	private boolean decodeSlash;
+	/**
+	 * 是否解码斜线
+	 */
+	private final boolean decodeSlash;
 
 	public SpringMvcContract() {
 		this(Collections.emptyList());
@@ -113,12 +128,12 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 	}
 
 	public SpringMvcContract(List<AnnotatedParameterProcessor> annotatedParameterProcessors,
-			ConversionService conversionService) {
+							 ConversionService conversionService) {
 		this(annotatedParameterProcessors, conversionService, true);
 	}
 
 	public SpringMvcContract(List<AnnotatedParameterProcessor> annotatedParameterProcessors,
-			ConversionService conversionService, boolean decodeSlash) {
+							 ConversionService conversionService, boolean decodeSlash) {
 		Assert.notNull(annotatedParameterProcessors, "Parameter processors can not be null.");
 		Assert.notNull(conversionService, "ConversionService can not be null.");
 
@@ -142,7 +157,7 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 			TypeDescriptor elementTypeDescriptor = getElementTypeDescriptor(typeDescriptor);
 
 			checkState(elementTypeDescriptor != null,
-					"Could not resolve element type of Iterable type %s. Not declared?", typeDescriptor);
+				"Could not resolve element type of Iterable type %s. Not declared?", typeDescriptor);
 
 			typeDescriptor = elementTypeDescriptor;
 		}
@@ -169,17 +184,26 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	@Override
 	protected void processAnnotationOnClass(MethodMetadata data, Class<?> clz) {
+		// 类对象上存在0个接口
 		if (clz.getInterfaces().length == 0) {
+			// 寻找类对象上的RequestMapping注解对象
 			RequestMapping classAnnotation = findMergedAnnotation(clz, RequestMapping.class);
+			// 如果RequestMapping注解对象存在
 			if (classAnnotation != null) {
 				// Prepend path from class annotation if specified
+				// 如果注解中的value属性存在并且数量大于0
 				if (classAnnotation.value().length > 0) {
+					// 提取value中的第一个元素
 					String pathValue = emptyToNull(classAnnotation.value()[0]);
+					// 解析第一个元素
 					pathValue = resolve(pathValue);
+					// 如果没有使用斜杠开头将补充斜杠
 					if (!pathValue.startsWith("/")) {
 						pathValue = "/" + pathValue;
 					}
+					// 为方法元数据中的RequestTemplate对象设置路由地址
 					data.template().uri(pathValue);
+					// 确认是否解码斜杠值是否和方法元数据中的数据一样，如果不一样则需要重新设置
 					if (data.template().decodeSlash() != decodeSlash) {
 						data.template().decodeSlash(decodeSlash);
 					}
@@ -190,23 +214,32 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	@Override
 	public MethodMetadata parseAndValidateMetadata(Class<?> targetType, Method method) {
+		// 向成员变量processedMethods加入数据
 		processedMethods.put(Feign.configKey(targetType, method), method);
+		// 父类进行解析和验证
 		MethodMetadata md = super.parseAndValidateMetadata(targetType, method);
 
+		// 寻找处理类上RequestMapping的注解
 		RequestMapping classAnnotation = findMergedAnnotation(targetType, RequestMapping.class);
+		// 如果类上纯在RequestMapping注解
 		if (classAnnotation != null) {
 			// produces - use from class annotation only if method has not specified this
+			// 如果方法元数据中的头信息不存在ACCEPT信息
 			if (!md.template().headers().containsKey(ACCEPT)) {
+				// 解析生产者相关内容
 				parseProduces(md, method, classAnnotation);
 			}
 
 			// consumes -- use from class annotation only if method has not specified this
+			// 如果方法元数据中的头信息不存在CONTENT_TYPE信息
 			if (!md.template().headers().containsKey(CONTENT_TYPE)) {
+				// 解析消费者相关内容
 				parseConsumes(md, method, classAnnotation);
 			}
 
 			// headers -- class annotation is inherited to methods, always write these if
 			// present
+			// 解析头信息
 			parseHeaders(md, method, classAnnotation);
 		}
 		return md;
@@ -214,36 +247,53 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	@Override
 	protected void processAnnotationOnMethod(MethodMetadata data, Annotation methodAnnotation, Method method) {
-		if (CollectionFormat.class.isInstance(methodAnnotation)) {
+		// 判断方法注解是否是CollectionFormat类型
+		if (methodAnnotation instanceof CollectionFormat) {
+			// 寻找CollectionFormat注解
 			CollectionFormat collectionFormat = findMergedAnnotation(method, CollectionFormat.class);
+			// 将CollectionFormat数据值设置到RequestTemplate对象的collectionFormat属性中
 			data.template().collectionFormat(collectionFormat.value());
 		}
 
-		if (!RequestMapping.class.isInstance(methodAnnotation)
-				&& !methodAnnotation.annotationType().isAnnotationPresent(RequestMapping.class)) {
+		// 如果方法注解不是RequestMapping类型并且没有包含RequestMapping注解跳过处理
+		if (!(methodAnnotation instanceof RequestMapping)
+			&& !methodAnnotation.annotationType().isAnnotationPresent(RequestMapping.class)) {
 			return;
 		}
 
+		// 在方法上寻找RequestMapping注解信息
 		RequestMapping methodMapping = findMergedAnnotation(method, RequestMapping.class);
 		// HTTP Method
+		// 获取RequestMapping注解中的HTTP请求方式
 		RequestMethod[] methods = methodMapping.method();
+		// 如果没有数据则默认使用GET请求
 		if (methods.length == 0) {
-			methods = new RequestMethod[] { RequestMethod.GET };
+			methods = new RequestMethod[]{RequestMethod.GET};
 		}
+		// 检查method
 		checkOne(method, methods, "method");
+		// 为方法元数据设置RequestTemplate中的方法信息
 		data.template().method(Request.HttpMethod.valueOf(methods[0].name()));
 
 		// path
+		// 检查value数据
 		checkAtMostOne(method, methodMapping.value(), "value");
+		// 如果value数据超过0个
 		if (methodMapping.value().length > 0) {
+			// 提取value属性值中的第一个元素
 			String pathValue = emptyToNull(methodMapping.value()[0]);
+			// 如果存在第一个元素
 			if (pathValue != null) {
+				// 将第一个元素进行解析
 				pathValue = resolve(pathValue);
 				// Append path from @RequestMapping if value is present on method
+				// 如果第一个元素不是以斜杠开头并且不是以斜杠结尾补充斜杠
 				if (!pathValue.startsWith("/") && !data.template().path().endsWith("/")) {
 					pathValue = "/" + pathValue;
 				}
+				// 为方法元数据对象设置路由地址
 				data.template().uri(pathValue, true);
+				// 确认是否解码斜杠值是否和方法元数据中的数据一样，如果不一样则需要重新设置
 				if (data.template().decodeSlash() != decodeSlash) {
 					data.template().decodeSlash(decodeSlash);
 				}
@@ -251,14 +301,18 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 		}
 
 		// produces
+		// 处理produces
 		parseProduces(data, method, methodMapping);
 
 		// consumes
+		// 处理consumes
 		parseConsumes(data, method, methodMapping);
 
 		// headers
+		// 处理headers
 		parseHeaders(data, method, methodMapping);
 
+		// 设置indexToExpander属性为空map对象
 		data.indexToExpander(new LinkedHashMap<>());
 	}
 
@@ -271,13 +325,13 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	private void checkAtMostOne(Method method, Object[] values, String fieldName) {
 		checkState(values != null && (values.length == 0 || values.length == 1),
-				"Method %s can only contain at most 1 %s field. Found: %s", method.getName(), fieldName,
-				values == null ? null : Arrays.asList(values));
+			"Method %s can only contain at most 1 %s field. Found: %s", method.getName(), fieldName,
+			values == null ? null : Arrays.asList(values));
 	}
 
 	private void checkOne(Method method, Object[] values, String fieldName) {
 		checkState(values != null && values.length == 1, "Method %s can only contain 1 %s field. Found: %s",
-				method.getName(), fieldName, values == null ? null : Arrays.asList(values));
+			method.getName(), fieldName, values == null ? null : Arrays.asList(values));
 	}
 
 	@Override
@@ -285,17 +339,17 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 		boolean isHttpAnnotation = false;
 
 		AnnotatedParameterProcessor.AnnotatedParameterContext context = new SimpleAnnotatedParameterContext(data,
-				paramIndex);
+			paramIndex);
 		Method method = processedMethods.get(data.configKey());
 		for (Annotation parameterAnnotation : annotations) {
 			AnnotatedParameterProcessor processor = annotatedArgumentProcessors
-					.get(parameterAnnotation.annotationType());
+				.get(parameterAnnotation.annotationType());
 			if (processor != null) {
 				Annotation processParameterAnnotation;
 				// synthesize, handling @AliasFor, while falling back to parameter name on
 				// missing String #value():
 				processParameterAnnotation = synthesizeWithMethodParameterNameAsFallbackValue(parameterAnnotation,
-						method, paramIndex);
+					method, paramIndex);
 				isHttpAnnotation |= processor.processArgument(context, processParameterAnnotation, method);
 			}
 		}
@@ -313,36 +367,45 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 	}
 
 	private void parseProduces(MethodMetadata md, Method method, RequestMapping annotation) {
+		// 获取RequestMapping注解中的produces数据
 		String[] serverProduces = annotation.produces();
+		// 确认是否存在produces数据，如果存在将获取第一个元素的数据
 		String clientAccepts = serverProduces.length == 0 ? null : emptyToNull(serverProduces[0]);
 		if (clientAccepts != null) {
+			// 为方法元数据中的RequestTemplate设置头信息
 			md.template().header(ACCEPT, clientAccepts);
 		}
 	}
 
 	private void parseConsumes(MethodMetadata md, Method method, RequestMapping annotation) {
+		// 获取RequestMapping注解中的consumes信息
 		String[] serverConsumes = annotation.consumes();
+		// 确认是否存在consumes数据，如果存在将获取第一个元素的数据
 		String clientProduces = serverConsumes.length == 0 ? null : emptyToNull(serverConsumes[0]);
 		if (clientProduces != null) {
+			// 为方法元数据中的RequestTemplate设置头信息
 			md.template().header(CONTENT_TYPE, clientProduces);
 		}
 	}
 
 	private void parseHeaders(MethodMetadata md, Method method, RequestMapping annotation) {
 		// TODO: only supports one header value per key
+		// 如果RequestMapping注解中的头信息存在并且数量大于1
 		if (annotation.headers() != null && annotation.headers().length > 0) {
+			// 循环RequestMapping注解的头信息将数据内容放入到方法元数据中
 			for (String header : annotation.headers()) {
 				int index = header.indexOf('=');
+				// 切分等号前后的数据作为头信息置入
 				if (!header.contains("!=") && index >= 0) {
 					md.template().header(resolve(header.substring(0, index)),
-							resolve(header.substring(index + 1).trim()));
+						resolve(header.substring(index + 1).trim()));
 				}
 			}
 		}
 	}
 
 	private Map<Class<? extends Annotation>, AnnotatedParameterProcessor> toAnnotatedArgumentProcessorMap(
-			List<AnnotatedParameterProcessor> processors) {
+		List<AnnotatedParameterProcessor> processors) {
 		Map<Class<? extends Annotation>, AnnotatedParameterProcessor> result = new HashMap<>();
 		for (AnnotatedParameterProcessor processor : processors) {
 			result.put(processor.getAnnotationType(), processor);
@@ -365,7 +428,7 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 	}
 
 	private Annotation synthesizeWithMethodParameterNameAsFallbackValue(Annotation parameterAnnotation, Method method,
-			int parameterIndex) {
+																		int parameterIndex) {
 		Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(parameterAnnotation);
 		Object defaultValue = AnnotationUtils.getDefaultValue(parameterAnnotation);
 		if (defaultValue instanceof String && defaultValue.equals(annotationAttributes.get(AnnotationUtils.VALUE))) {
@@ -381,8 +444,8 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 	private boolean shouldAddParameterName(int parameterIndex, Type[] parameterTypes, String[] parameterNames) {
 		// has a parameter name
 		return parameterNames != null && parameterNames.length > parameterIndex
-		// has a type
-				&& parameterTypes != null && parameterTypes.length > parameterIndex;
+			// has a type
+			&& parameterTypes != null && parameterTypes.length > parameterIndex;
 	}
 
 	private boolean isMultipartFormData(MethodMetadata data) {
@@ -392,8 +455,7 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 			String type = contentTypes.iterator().next();
 			try {
 				return Objects.equals(MediaType.valueOf(type), MediaType.MULTIPART_FORM_DATA);
-			}
-			catch (InvalidMediaTypeException ignored) {
+			} catch (InvalidMediaTypeException ignored) {
 				return false;
 			}
 		}
