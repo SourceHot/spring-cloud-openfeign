@@ -32,12 +32,14 @@ public interface AnnotatedParameterProcessor {
 
 	/**
 	 * Retrieves the processor supported annotation type.
+	 * 获取注解类型
 	 * @return the annotation type
 	 */
 	Class<? extends Annotation> getAnnotationType();
 
 	/**
 	 * Process the annotated parameter.
+	 * 处理注解
 	 * @param context the parameter context
 	 * @param annotation the annotation instance
 	 * @param method the method that contains the annotation
@@ -54,24 +56,28 @@ public interface AnnotatedParameterProcessor {
 
 		/**
 		 * Retrieves the method metadata.
+		 * 获取方法元数据
 		 * @return the method metadata
 		 */
 		MethodMetadata getMethodMetadata();
 
 		/**
 		 * Retrieves the index of the parameter.
+		 * 获取参数索引
 		 * @return the parameter index
 		 */
 		int getParameterIndex();
 
 		/**
 		 * Sets the parameter name.
+		 * 设置参数名称
 		 * @param name the name of the parameter
 		 */
 		void setParameterName(String name);
 
 		/**
 		 * Sets the template parameter.
+		 * 设置模板参数
 		 * @param name the template parameter
 		 * @param rest the existing parameter values
 		 * @return parameters

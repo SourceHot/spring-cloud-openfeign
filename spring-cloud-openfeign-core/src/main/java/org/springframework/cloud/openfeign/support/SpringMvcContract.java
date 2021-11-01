@@ -447,15 +447,23 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	private Annotation synthesizeWithMethodParameterNameAsFallbackValue(Annotation parameterAnnotation, Method method,
 																		int parameterIndex) {
+		// 提取注解数据表
 		Map<String, Object> annotationAttributes = AnnotationUtils.getAnnotationAttributes(parameterAnnotation);
+		// 获取注解默认值
 		Object defaultValue = AnnotationUtils.getDefaultValue(parameterAnnotation);
+		// 如果注解默认值是String类型并且默认值和注解数据表中的value值相同
 		if (defaultValue instanceof String && defaultValue.equals(annotationAttributes.get(AnnotationUtils.VALUE))) {
+			// 提取方法参数类型集合
 			Type[] parameterTypes = method.getGenericParameterTypes();
+			// 获取参数名称集合
 			String[] parameterNames = PARAMETER_NAME_DISCOVERER.getParameterNames(method);
+			// 确认是否需要添加参数名称
 			if (shouldAddParameterName(parameterIndex, parameterTypes, parameterNames)) {
+				// 向注解属性表加入value数据
 				annotationAttributes.put(AnnotationUtils.VALUE, parameterNames[parameterIndex]);
 			}
 		}
+		// 注解合并
 		return AnnotationUtils.synthesizeAnnotation(annotationAttributes, parameterAnnotation.annotationType(), null);
 	}
 
