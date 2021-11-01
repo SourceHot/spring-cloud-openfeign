@@ -336,33 +336,51 @@ public class SpringMvcContract extends Contract.BaseContract implements Resource
 
 	@Override
 	protected boolean processAnnotationsOnParameter(MethodMetadata data, Annotation[] annotations, int paramIndex) {
+		// 创建是否是http注解标记
 		boolean isHttpAnnotation = false;
 
+		// 创建注解参数参数上下文
 		AnnotatedParameterProcessor.AnnotatedParameterContext context = new SimpleAnnotatedParameterContext(data,
 			paramIndex);
+		// 获取方法对象
 		Method method = processedMethods.get(data.configKey());
+		// 遍历注解集合
 		for (Annotation parameterAnnotation : annotations) {
+			// 根据注解类型从注解处理器映射表中获取注解处理器
 			AnnotatedParameterProcessor processor = annotatedArgumentProcessors
 				.get(parameterAnnotation.annotationType());
+			// 如果注解处理器不为空
 			if (processor != null) {
+				//
 				Annotation processParameterAnnotation;
 				// synthesize, handling @AliasFor, while falling back to parameter name on
 				// missing String #value():
+				// 处理注解主要处理内容是aliasFor和value为空的情况
 				processParameterAnnotation = synthesizeWithMethodParameterNameAsFallbackValue(parameterAnnotation,
 					method, paramIndex);
+				// 确认是否是http注解标记
 				isHttpAnnotation |= processor.processArgument(context, processParameterAnnotation, method);
 			}
 		}
 
+		// 如果满足以下三个条件
+		// 1. 不是表单参数
+		// 2. 不是http注解
+		// 3. Expander数据为空
 		if (!isMultipartFormData(data) && isHttpAnnotation && data.indexToExpander().get(paramIndex) == null) {
+			// 创建类型描述器
 			TypeDescriptor typeDescriptor = createTypeDescriptor(method, paramIndex);
+			// 通过转换服务确认当前类型是否可以转换为String
 			if (conversionService.canConvert(typeDescriptor, STRING_TYPE_DESCRIPTOR)) {
+				// 从成员变量convertingExpanderFactory中获取Expander对象
 				Param.Expander expander = convertingExpanderFactory.getExpander(typeDescriptor);
+				// 如果Expander对象不为空则设置到方法元数据的indexToExpander中
 				if (expander != null) {
 					data.indexToExpander().put(paramIndex, expander);
 				}
 			}
 		}
+		// 返回是否是http注解标记
 		return isHttpAnnotation;
 	}
 
