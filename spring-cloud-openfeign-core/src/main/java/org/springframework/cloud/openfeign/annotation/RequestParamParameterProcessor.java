@@ -47,10 +47,14 @@ public class RequestParamParameterProcessor implements AnnotatedParameterProcess
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 从上下文中获取参数索引
 		int parameterIndex = context.getParameterIndex();
+		// 获取参数索引对应的参数类型
 		Class<?> parameterType = method.getParameterTypes()[parameterIndex];
+		// 获取方法元数据
 		MethodMetadata data = context.getMethodMetadata();
 
+		// 如果参数类型是Map
 		if (Map.class.isAssignableFrom(parameterType)) {
 			checkState(data.queryMapIndex() == null, "Query map can only be present once.");
 			data.queryMapIndex(parameterIndex);
@@ -58,12 +62,18 @@ public class RequestParamParameterProcessor implements AnnotatedParameterProcess
 			return true;
 		}
 
+		// 提取注解
 		RequestParam requestParam = ANNOTATION.cast(annotation);
+		// 提取RequestParam注解的value值
 		String name = requestParam.value();
+		// 如果value值为空则抛出异常
 		checkState(emptyToNull(name) != null, "RequestParam.value() was empty on parameter %s", parameterIndex);
+		// 设置参数名称
 		context.setParameterName(name);
 
+		// 设置requestTemplate参数
 		Collection<String> query = context.setTemplateParameter(name, data.template().queries().get(name));
+		// 设置query参数
 		data.template().query(name, query);
 		return true;
 	}

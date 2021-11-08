@@ -38,8 +38,12 @@ import static feign.Util.emptyToNull;
  */
 public class PathVariableParameterProcessor implements AnnotatedParameterProcessor {
 
+	// PathVariable注解类
 	private static final Class<PathVariable> ANNOTATION = PathVariable.class;
 
+	/**
+	 * 获取注解类型
+	 */
 	@Override
 	public Class<? extends Annotation> getAnnotationType() {
 		return ANNOTATION;
@@ -47,15 +51,25 @@ public class PathVariableParameterProcessor implements AnnotatedParameterProcess
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 提取注解的value值
 		String name = ANNOTATION.cast(annotation).value();
+		// 检查value是否为空，如果是则抛出异常
 		checkState(emptyToNull(name) != null, "PathVariable annotation was empty on param %s.",
-				context.getParameterIndex());
+			context.getParameterIndex());
+		// 上下文中设置参数名称
 		context.setParameterName(name);
 
+		// 从上下文中获取方法元数据
 		MethodMetadata data = context.getMethodMetadata();
+		// 将花括号和value值组合
 		String varName = '{' + name + '}';
+		// 满足下面三个条件
+		// 1. 如果方法元数据中的url不包含组合后的值
+		// 2. 方法元数据中的queryMap没有组合后的值
+		// 3. 方法元数据中的headerMap没有组合后的值
 		if (!data.template().url().contains(varName) && !searchMapValues(data.template().queries(), varName)
-				&& !searchMapValues(data.template().headers(), varName)) {
+			&& !searchMapValues(data.template().headers(), varName)) {
+			// 向方法元数据中加入formParams数据
 			data.formParams().add(name);
 		}
 		return true;

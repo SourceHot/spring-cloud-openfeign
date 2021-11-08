@@ -45,15 +45,22 @@ public class RequestPartParameterProcessor implements AnnotatedParameterProcesso
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 获取参数索引
 		int parameterIndex = context.getParameterIndex();
+		// 获取方法元数据
 		MethodMetadata data = context.getMethodMetadata();
 
+		// 提取RequestPart注解的value值
 		String name = ANNOTATION.cast(annotation).value();
 		checkState(emptyToNull(name) != null, "RequestPart.value() was empty on parameter %s", parameterIndex);
+		// 设置参数名称
 		context.setParameterName(name);
 
+		// form表单参数设置
 		data.formParams().add(name);
+		// 设置模板参数
 		Collection<String> names = context.setTemplateParameter(name, data.indexToName().get(parameterIndex));
+		// 向方法元数据设置索引和名称
 		data.indexToName().put(parameterIndex, names);
 		return true;
 	}

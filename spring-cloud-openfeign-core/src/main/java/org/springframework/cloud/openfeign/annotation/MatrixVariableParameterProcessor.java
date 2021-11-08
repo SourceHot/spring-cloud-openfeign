@@ -49,20 +49,25 @@ public class MatrixVariableParameterProcessor implements AnnotatedParameterProce
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 从上下文中获取参数索引
 		int parameterIndex = context.getParameterIndex();
+		// 获取参数索引对应的参数类型
 		Class<?> parameterType = method.getParameterTypes()[parameterIndex];
+		// 获取方法元数据
 		MethodMetadata data = context.getMethodMetadata();
+		// 提取MatrixVariable注解的value数据
 		String name = ANNOTATION.cast(annotation).value();
 
+		// 如果value数据为空抛出异常
 		checkState(emptyToNull(name) != null, "MatrixVariable annotation was empty on param %s.",
-				context.getParameterIndex());
+			context.getParameterIndex());
 
+		// 设置参数名称
 		context.setParameterName(name);
-
+		// 如果参数类型是Map
 		if (Map.class.isAssignableFrom(parameterType)) {
 			data.indexToExpander().put(parameterIndex, this::expandMap);
-		}
-		else {
+		} else {
 			data.indexToExpander().put(parameterIndex, object -> ";" + name + "=" + object.toString());
 		}
 

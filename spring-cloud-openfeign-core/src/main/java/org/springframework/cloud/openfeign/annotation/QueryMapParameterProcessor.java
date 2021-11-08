@@ -41,10 +41,15 @@ public class QueryMapParameterProcessor implements AnnotatedParameterProcessor {
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 获取参数索引
 		int paramIndex = context.getParameterIndex();
+		// 获取方法元数据
 		MethodMetadata metadata = context.getMethodMetadata();
+		// 如果方法元数据中的queryMapIndex为空
 		if (metadata.queryMapIndex() == null) {
+			// 设置queryMapIndex
 			metadata.queryMapIndex(paramIndex);
+			// 设置queryMapEncoded
 			metadata.queryMapEncoded(SpringQueryMap.class.cast(annotation).encoded());
 		}
 		return true;

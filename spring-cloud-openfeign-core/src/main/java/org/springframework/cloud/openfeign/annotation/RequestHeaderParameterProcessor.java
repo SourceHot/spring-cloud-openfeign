@@ -47,21 +47,30 @@ public class RequestHeaderParameterProcessor implements AnnotatedParameterProces
 
 	@Override
 	public boolean processArgument(AnnotatedParameterContext context, Annotation annotation, Method method) {
+		// 从上下文中获取参数索引
 		int parameterIndex = context.getParameterIndex();
+		// 获取参数索引对应的参数类型
 		Class<?> parameterType = method.getParameterTypes()[parameterIndex];
+		// 获取方法元数据
 		MethodMetadata data = context.getMethodMetadata();
 
+		// 如果参数类型是map
 		if (Map.class.isAssignableFrom(parameterType)) {
+			// 如果方法元数据中的headerMapIndex数据不为空抛出异常
 			checkState(data.headerMapIndex() == null, "Header map can only be present once.");
+			// 设置headerMapIndex数据
 			data.headerMapIndex(parameterIndex);
-
 			return true;
 		}
 
+		// 提取RequestHeader注解的value数据
 		String name = ANNOTATION.cast(annotation).value();
+		// 如果value数据为空抛出异常
 		checkState(emptyToNull(name) != null, "RequestHeader.value() was empty on parameter %s", parameterIndex);
+		// 设置参数名称
 		context.setParameterName(name);
 
+		// 设置头信息
 		Collection<String> header = context.setTemplateParameter(name, data.template().headers().get(name));
 		data.template().header(name, header);
 		return true;
