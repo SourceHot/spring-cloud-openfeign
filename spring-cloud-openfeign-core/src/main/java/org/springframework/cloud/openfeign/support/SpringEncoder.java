@@ -61,11 +61,17 @@ import static org.springframework.cloud.openfeign.support.FeignUtils.getHttpHead
 public class SpringEncoder implements Encoder {
 
 	private static final Log log = LogFactory.getLog(SpringEncoder.class);
-
+	/**
+	 * Spring中的form表单相关的编码器
+	 */
 	private final SpringFormEncoder springFormEncoder;
-
+	/**
+	 * HttpMessageConverters的对象工厂
+	 */
 	private final ObjectFactory<HttpMessageConverters> messageConverters;
-
+	/**
+	 * feign编码器属性
+	 */
 	private final FeignEncoderProperties encoderProperties;
 
 	public SpringEncoder(ObjectFactory<HttpMessageConverters> messageConverters) {

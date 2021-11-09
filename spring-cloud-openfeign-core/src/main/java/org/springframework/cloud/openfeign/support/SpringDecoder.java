@@ -41,6 +41,9 @@ import static org.springframework.cloud.openfeign.support.FeignUtils.getHttpHead
  */
 public class SpringDecoder implements Decoder {
 
+	/**
+	 * HttpMessageConverters对象工厂
+	 */
 	private ObjectFactory<HttpMessageConverters> messageConverters;
 
 	public SpringDecoder(ObjectFactory<HttpMessageConverters> messageConverters) {
@@ -50,6 +53,7 @@ public class SpringDecoder implements Decoder {
 	@Override
 	public Object decode(final Response response, Type type) throws IOException, FeignException {
 		if (type instanceof Class || type instanceof ParameterizedType || type instanceof WildcardType) {
+			// 构建HttpMessageConverterExtractor对象
 			@SuppressWarnings({ "unchecked", "rawtypes" })
 			HttpMessageConverterExtractor<?> extractor = new HttpMessageConverterExtractor(type,
 					this.messageConverters.getObject().getConverters());
