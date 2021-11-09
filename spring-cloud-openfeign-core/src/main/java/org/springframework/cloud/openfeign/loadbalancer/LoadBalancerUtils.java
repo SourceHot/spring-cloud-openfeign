@@ -88,11 +88,12 @@ final class LoadBalancerUtils {
 	}
 
 	static Response executeWithLoadBalancerLifecycleProcessing(Client feignClient, Request.Options options,
-			Request feignRequest, org.springframework.cloud.client.loadbalancer.Request lbRequest,
-			org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse,
-			Set<LoadBalancerLifecycle> supportedLifecycleProcessors) throws IOException {
+															   Request feignRequest, org.springframework.cloud.client.loadbalancer.Request lbRequest,
+															   org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse,
+															   Set<LoadBalancerLifecycle> supportedLifecycleProcessors) throws IOException {
+
 		return executeWithLoadBalancerLifecycleProcessing(feignClient, options, feignRequest, lbRequest, lbResponse,
-				supportedLifecycleProcessors, true);
+			supportedLifecycleProcessors, true);
 	}
 
 }
