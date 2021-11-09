@@ -48,23 +48,26 @@ final class LoadBalancerUtils {
 	}
 
 	static Response executeWithLoadBalancerLifecycleProcessing(Client feignClient, Request.Options options,
-			Request feignRequest, org.springframework.cloud.client.loadbalancer.Request lbRequest,
-			org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse,
-			Set<LoadBalancerLifecycle> supportedLifecycleProcessors, boolean loadBalanced) throws IOException {
+															   Request feignRequest, org.springframework.cloud.client.loadbalancer.Request lbRequest,
+															   org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse,
+															   Set<LoadBalancerLifecycle> supportedLifecycleProcessors, boolean loadBalanced) throws IOException {
+		// 执行生命周期接口的onStartRequest方法
 		supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onStartRequest(lbRequest, lbResponse));
 		try {
+			// feign客户端进行请求发送并且接收响应
 			Response response = feignClient.execute(feignRequest, options);
+			// 判断是否需要负载均衡
 			if (loadBalanced) {
+				// 执行生命周期接口的onComplete方法
 				supportedLifecycleProcessors.forEach(
-						lifecycle -> lifecycle.onComplete(new CompletionContext<>(CompletionContext.Status.SUCCESS,
-								lbRequest, lbResponse, buildResponseData(response))));
+					lifecycle -> lifecycle.onComplete(new CompletionContext<>(CompletionContext.Status.SUCCESS,
+						lbRequest, lbResponse, buildResponseData(response))));
 			}
 			return response;
-		}
-		catch (Exception exception) {
+		} catch (Exception exception) {
 			if (loadBalanced) {
 				supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onComplete(
-						new CompletionContext<>(CompletionContext.Status.FAILED, exception, lbRequest, lbResponse)));
+					new CompletionContext<>(CompletionContext.Status.FAILED, exception, lbRequest, lbResponse)));
 			}
 			throw exception;
 		}
